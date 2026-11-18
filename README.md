@@ -7,7 +7,8 @@ assets are used.
 Conventions: right-handed, +Y up, meters, radians, column-major matrices, clip depth 0..1.
 
 ## Status
-Phase 1 (this commit): workspace, `gtm-math`, `gtm-cull` (frustum + XZ grid + distance culling).
+Phase 1: workspace, `gtm-math`, `gtm-cull` (frustum + XZ grid + distance culling).
+Phase 2a: `gtm-vehicle` (engine, gearbox, steering, suspension lean), ported from Defy (MIT), see THIRD_PARTY_NOTICES.md.
 Not built or tested yet.
 
 ## Roadmap

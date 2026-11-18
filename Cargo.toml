@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/gtm-math", "crates/gtm-cull"]
+members = ["crates/gtm-math", "crates/gtm-cull", "crates/gtm-vehicle"]
 
 [workspace.package]
 version = "0.1.0"

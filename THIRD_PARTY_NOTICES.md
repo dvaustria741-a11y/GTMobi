@@ -15,10 +15,10 @@ Software is furnished to do so, subject to the following conditions: the above c
 and this permission notice shall be included in all copies or substantial portions of the
 Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
 
-## Defy art assets — not imported yet
-Defy's `assets/` folder mixes third-party models. `assets/maps/city_prisma_3d` is CC-BY-4.0
-(x_blade, Sketchfab) and requires credit. The weapon models and textures carry no license file
-in the repo, so they are not copied here until their origin and terms are confirmed.
+## Defy art assets — imported, see assets/third_party/defy/MANIFEST.md
+`assets/maps/city_prisma_3d` is CC-BY-4.0 (x_blade, Sketchfab) and requires credit.
+The weapon models and textures were imported on the project owner's statement that they are
+open source; per-file authors and terms are not recorded in the Defy repo.
 
 ## Not used
 Rockstar Games' GTA V scripts and research material are proprietary and are not part of this project.

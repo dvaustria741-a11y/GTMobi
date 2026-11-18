@@ -9,7 +9,8 @@ Conventions: right-handed, +Y up, meters, radians, column-major matrices, clip d
 ## Status
 Phase 1: workspace, `gtm-math`, `gtm-cull` (frustum + XZ grid + distance culling).
 Phase 2a: `gtm-vehicle` (engine, gearbox, steering, suspension lean), ported from Defy (MIT), see THIRD_PARTY_NOTICES.md.
-Not built or tested yet.
+Phase 2b: `gtm-lighting` (time-of-day sun direction and keyframed dusk palette, uncalibrated art values).
+Unit tests pass on host Linux (Rust 1.75); nothing built for Android or run on a device.
 
 ## Roadmap
 1. Math + culling (done, unbuilt)

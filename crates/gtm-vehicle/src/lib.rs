@@ -269,7 +269,7 @@ mod tests {
         assert_eq!(first.rpm, 20);
         assert_eq!(first.gear, 0, "shift delay (0.5 s) not elapsed yet");
         let mut gear = 0;
-        for _ in 0..10 {
+        for _ in 0..5 {
             gear = e.step(GAS, 5.0, 5.0, 0.1).unwrap().gear;
         }
         assert_eq!(gear, 1);

@@ -1,0 +1,5 @@
+/target
+*.keystore
+*.jks
+local.properties
+.env

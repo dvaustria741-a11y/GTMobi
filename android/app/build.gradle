@@ -8,30 +8,23 @@ android {
 
     defaultConfig {
         applicationId  'com.zenkai.gtmobi'
-        minSdk         26          // Vulkan 1.0 baseline — Adreno 619 hits 1.1
+        minSdk         26
         targetSdk      34
         versionCode    1
         versionName    '0.1.0'
-
-        ndk {
-            abiFilters 'arm64-v8a'  // primary; add 'x86_64' for emulator if needed
-        }
+        ndk { abiFilters 'arm64-v8a' }
     }
 
     buildTypes {
         release {
-            minifyEnabled   false
-            signingConfig   signingConfigs.debug   // swap for real keystore before shipping
+            minifyEnabled false
+            signingConfig signingConfigs.debug
         }
-        debug {
-            jniDebuggable true
-        }
+        debug { jniDebuggable true }
     }
 
     sourceSets {
-        main {
-            jniLibs.srcDirs = ['src/main/jniLibs']   // cargo-ndk drops .so here
-        }
+        main { jniLibs.srcDirs = ['src/main/jniLibs'] }
     }
 
     compileOptions {
@@ -40,10 +33,13 @@ android {
     }
 }
 
-// ── Build Rust .so before assembling the APK ─────────────────────────────────
-// cargo-ndk is expected on PATH (installed in CI via "cargo install cargo-ndk")
+// Local-only Rust build — CI skips this with -x buildRustLib
 task buildRustLib(type: Exec) {
-    workingDir rootProject.projectDir.parentFile   // repo root
+    onlyIf {
+        // skip if .so is already present (CI pre-builds it)
+        !file("src/main/jniLibs/arm64-v8a/libgtm_app.so").exists()
+    }
+    workingDir rootProject.projectDir.parentFile
     def ndkHome = System.getenv('ANDROID_NDK_HOME') ?: ''
     environment 'ANDROID_NDK_HOME', ndkHome
     commandLine 'cargo', 'ndk',
@@ -52,11 +48,6 @@ task buildRustLib(type: Exec) {
         'build', '--release', '-p', 'gtm-app'
 }
 
-// Wire Rust build into Gradle lifecycle
 preBuild.dependsOn buildRustLib
 
-dependencies {
-    // NativeActivity is a framework class — no extra AAR needed
-    // Add here if you later switch to GameActivity:
-    // implementation 'androidx.games:games-activity:2.0.2'
-}
+dependencies {}

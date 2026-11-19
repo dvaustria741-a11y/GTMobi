@@ -343,6 +343,10 @@ impl GtmRenderer {
         }
     }
 
+    pub fn device(&self) -> &Device { &self.device }
+
+    pub fn queue(&self) -> &Queue { &self.queue }
+
     pub fn resize(&mut self, width: u32, height: u32) {
         if width == 0 || height == 0 { return; }
         self.config.width  = width;

@@ -5,7 +5,7 @@ edition = "2021"
 description = "GTMobi wgpu PBR renderer — GTA 6 visual target"
 
 [dependencies]
-wgpu           = { version = "0.20", features = ["vulkan-portability"] }
+wgpu           = { version = "22", features = ["vulkan-portability"] }
 winit          = { version = "0.30" }
 gltf           = { version = "1.4", features = ["utils", "image"] }
 bytemuck       = { version = "1.14", features = ["derive"] }
@@ -13,6 +13,7 @@ glam           = "0.28"
 log            = "0.4"
 image          = { version = "0.25", default-features = false, features = ["png","jpeg","webp"] }
 pollster       = "0.3"
+anyhow         = "1"
 gtm-math       = { path = "../gtm-math" }
 gtm-cull       = { path = "../gtm-cull" }
 gtm-lighting   = { path = "../gtm-lighting" }

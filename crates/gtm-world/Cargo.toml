@@ -13,4 +13,4 @@ bytemuck    = { version = "1.14", features = ["derive"] }
 log         = "0.4"
 noise       = "0.9"       # Perlin / simplex for terrain height + density
 rand        = "0.8"
-wgpu        = "0.20"
+wgpu        = "22"

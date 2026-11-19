@@ -16,18 +16,19 @@
     <application
         android:label="GTMobi"
         android:icon="@mipmap/ic_launcher"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:hardwareAccelerated="true"
         android:allowBackup="false"
         android:extractNativeLibs="true">
 
         <!--
             NativeActivity hosts the Rust cdylib.
-            android:name="android.app.NativeActivity" is in the framework — no AAR needed.
+            MainActivity extends android.app.NativeActivity and applies immersive fullscreen.
             lib_name must match the crate name without the "lib" prefix and with underscores:
             crate name "gtm-app"  →  lib name "gtm_app"  →  libgtm_app.so
         -->
         <activity
-            android:name="android.app.NativeActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:configChanges="orientation|keyboardHidden|screenLayout|screenSize|uiMode"

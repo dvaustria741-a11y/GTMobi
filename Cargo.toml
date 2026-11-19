@@ -11,6 +11,9 @@ members = [
     "crates/gtm-app",
 ]
 
+[workspace.package]
+edition = "2021"
+
 [workspace.dependencies]
 glam     = "0.28"
 bytemuck = { version = "1.14", features = ["derive"] }

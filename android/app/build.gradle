@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace      'com.zenkai.gtmobi'
+    compileSdk     34
+
+    defaultConfig {
+        applicationId  'com.zenkai.gtmobi'
+        minSdk         26          // Vulkan 1.0 baseline — Adreno 619 hits 1.1
+        targetSdk      34
+        versionCode    1
+        versionName    '0.1.0'
+
+        ndk {
+            abiFilters 'arm64-v8a'  // primary; add 'x86_64' for emulator if needed
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled   false
+            signingConfig   signingConfigs.debug   // swap for real keystore before shipping
+        }
+        debug {
+            jniDebuggable true
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']   // cargo-ndk drops .so here
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// ── Build Rust .so before assembling the APK ─────────────────────────────────
+// cargo-ndk is expected on PATH (installed in CI via "cargo install cargo-ndk")
+task buildRustLib(type: Exec) {
+    workingDir rootProject.projectDir.parentFile   // repo root
+    def ndkHome = System.getenv('ANDROID_NDK_HOME') ?: ''
+    environment 'ANDROID_NDK_HOME', ndkHome
+    commandLine 'cargo', 'ndk',
+        '-t', 'arm64-v8a',
+        '-o', "${projectDir}/src/main/jniLibs",
+        'build', '--release', '-p', 'gtm-app'
+}
+
+// Wire Rust build into Gradle lifecycle
+preBuild.dependsOn buildRustLib
+
+dependencies {
+    // NativeActivity is a framework class — no extra AAR needed
+    // Add here if you later switch to GameActivity:
+    // implementation 'androidx.games:games-activity:2.0.2'
+}

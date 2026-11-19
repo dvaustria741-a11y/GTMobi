@@ -1,0 +1,32 @@
+[package]
+name = "gtm-app"
+version = "0.2.0"
+edition = "2021"
+description = "GTMobi Android/desktop entry — NativeActivity + world + touch"
+
+[lib]
+name = "gtm_app"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+gtm-render  = { path = "../gtm-render" }
+gtm-math    = { path = "../gtm-math" }
+gtm-cull    = { path = "../gtm-cull" }
+gtm-vehicle = { path = "../gtm-vehicle" }
+gtm-lighting = { path = "../gtm-lighting" }
+gtm-world   = { path = "../gtm-world" }
+gtm-touch   = { path = "../gtm-touch" }
+
+winit       = { version = "0.30", features = ["android-native-activity"] }
+wgpu        = "0.20"
+pollster    = "0.3"
+log         = "0.4"
+glam        = "0.28"
+anyhow      = "1"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android-activity = { version = "0.6", features = ["native-activity"] }
+android_logger   = "0.14"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+env_logger = "0.11"

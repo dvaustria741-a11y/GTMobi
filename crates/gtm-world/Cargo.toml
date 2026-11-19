@@ -1,0 +1,16 @@
+[package]
+name = "gtm-world"
+version = "0.1.0"
+edition = "2021"
+description = "GTMobi world: chunked Florida terrain, road grid, LOD, marshland biome"
+
+[dependencies]
+gtm-math    = { path = "../gtm-math" }
+gtm-cull    = { path = "../gtm-cull" }
+gtm-render  = { path = "../gtm-render" }
+glam        = "0.28"
+bytemuck    = { version = "1.14", features = ["derive"] }
+log         = "0.4"
+noise       = "0.9"       # Perlin / simplex for terrain height + density
+rand        = "0.8"
+wgpu        = "0.20"

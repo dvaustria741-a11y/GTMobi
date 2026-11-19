@@ -1,0 +1,9 @@
+[package]
+name = "gtm-touch"
+version = "0.1.0"
+edition = "2021"
+description = "GTMobi dual-stick touch input — left move, right camera"
+
+[dependencies]
+glam = "0.28"
+log  = "0.4"

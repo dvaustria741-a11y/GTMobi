@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.zenkai.gtmobi">
+
+    <!-- Vulkan is used via wgpu; require the feature so the Play Store filters correctly -->
+    <uses-feature
+        android:name="android.hardware.vulkan.level"
+        android:version="0"
+        android:required="true" />
+
+    <!-- Full sensor set for future motion controls -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false"/>
+    <uses-feature android:name="android.hardware.sensor.gyroscope"     android:required="false"/>
+
+    <application
+        android:label="GTMobi"
+        android:icon="@mipmap/ic_launcher"
+        android:hardwareAccelerated="true"
+        android:allowBackup="false"
+        android:extractNativeLibs="true">
+
+        <!--
+            NativeActivity hosts the Rust cdylib.
+            android:name="android.app.NativeActivity" is in the framework — no AAR needed.
+            lib_name must match the crate name without the "lib" prefix and with underscores:
+            crate name "gtm-app"  →  lib name "gtm_app"  →  libgtm_app.so
+        -->
+        <activity
+            android:name="android.app.NativeActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenLayout|screenSize|uiMode"
+            android:windowSoftInputMode="stateUnspecified|adjustResize">
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="gtm_app" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

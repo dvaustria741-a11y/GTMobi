@@ -20,6 +20,10 @@ impl World {
         }
     }
 
+    pub fn ground_height(&self, x: f32, z: f32) -> f32 {
+        self.terrain.height_at(x, z)
+    }
+
     pub fn update(&mut self, cam: Vec3, device: &Device, queue: &Queue) {
         self.terrain.update(cam, device, queue);
     }

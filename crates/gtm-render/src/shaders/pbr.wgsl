@@ -20,6 +20,7 @@ struct LightUniform {
     direction   : vec4<f32>,  // xyz = dir to light, w = intensity
     color       : vec4<f32>,  // xyz = color, w = unused
     ambient     : vec4<f32>,  // xyz = ambient color, w = strength
+    fog         : vec4<f32>,  // xyz = fog color (linear), w = density per meter
 }
 
 struct ModelUniform {
@@ -176,14 +177,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     var color = ambient + lo + emissive;
 
+    // Exponential distance fog toward the horizon color (before tonemapping).
+    let dist = length(camera.view_pos.xyz - in.world_pos);
+    color = mix(color, light.fog.rgb, 1.0 - exp(-dist * light.fog.w));
+
     // GTA 6 color grade
     color = grade(color);
 
     // ACES tonemap
     color = aces(color);
 
-    // Gamma (manual sRGB — wgpu surface may be linear)
-    color = pow(color, vec3(1.0 / 2.2));
+    // No manual gamma: the renderer selects an sRGB surface format, which encodes on write.
 
     return vec4<f32>(color, 1.0);
 }

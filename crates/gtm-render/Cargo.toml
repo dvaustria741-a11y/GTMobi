@@ -21,3 +21,6 @@ gtm-lighting   = { path = "../gtm-lighting" }
 [lib]
 name = "gtm_render"
 crate-type = ["rlib"]
+
+[dev-dependencies]
+naga = { version = "22", features = ["wgsl-in"] }

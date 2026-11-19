@@ -7,7 +7,7 @@ pub mod terrain;
 pub mod world;
 
 pub use biome::Biome;
-pub use chunk::{Chunk, ChunkCoord, CHUNK_SIZE};
+pub use chunk::{Chunk, ChunkCoord, HeightField, CHUNK_SIZE};
 pub use road::RoadGrid;
 pub use terrain::TerrainGen;
 pub use world::World;

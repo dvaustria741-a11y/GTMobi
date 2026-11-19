@@ -10,3 +10,9 @@ here. If you learn them, add them to this file.
 
 `maps/city_prisma_3d`: "City (prisma 3d)" by x_blade, https://sketchfab.com/3d-models/city-prisma-3d-c73688db9841445ba4fa3bf7b701fdf4,
 CC-BY-4.0. Credit must appear in-game (credits screen) and wherever the model is shared.
+
+## Characters
+- `characters/Object_Character.glb` from Defy `addons/Third-Person-Controller-main/Assets/Models/Characters/`
+  (skinned humanoid, 1 skin, 5 animations, Blender glTF exporter 4.1.63).
+- `characters/template_player.glb` from Defy `assets/characters/` (skinned, 2 skins, no animations).
+Author and license of both are not recorded in Defy; the project owner states they are open source.

@@ -38,6 +38,23 @@ pub struct Mesh {
     pub material_index: Option<usize>,
 }
 
+impl Mesh {
+    /// Uploads CPU geometry (e.g. a baked character) as a drawable mesh.
+    pub fn from_cpu(device: &Device, vertices: &[Vertex], indices: &[u32]) -> Mesh {
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("cpu_mesh_vb"),
+            contents: bytemuck::cast_slice(vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("cpu_mesh_ib"),
+            contents: bytemuck::cast_slice(indices),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+        Mesh { vertex_buffer, index_buffer, index_count: indices.len() as u32, material_index: None }
+    }
+}
+
 pub struct GltfScene {
     pub meshes: Vec<Mesh>,
 }

@@ -16,6 +16,8 @@ struct LightUniform {
     direction: [f32; 4],
     color: [f32; 4],
     ambient: [f32; 4],
+    /// rgb = fog color (linear, pre-tonemap), w = exponential fog density per meter.
+    fog: [f32; 4],
 }
 
 // Matches ModelUniform in pbr.wgsl — 2× mat4
@@ -55,6 +57,41 @@ pub struct GtmRenderer {
 
     pub camera: Camera,
     scenes: Vec<GltfScene>,
+    clear_color: Color,
+
+    sky_buf: Buffer,
+    sky_bg: BindGroup,
+    sky_pipeline: RenderPipeline,
+    sky: SkyUniform,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct SkyUniform {
+    inv_view_proj: [[f32; 4]; 4],
+    cam_pos: [f32; 4],
+    sun_dir: [f32; 4],
+    horizon: [f32; 4],
+    zenith: [f32; 4],
+    sun_color: [f32; 4],
+}
+
+/// Per-object transform. Create with [`GtmRenderer::create_model_slot`].
+pub struct ModelSlot {
+    buf: Buffer,
+    bind_group: BindGroup,
+}
+
+/// One indexed draw. `model = None` draws with the identity transform.
+pub struct DrawItem<'a> {
+    pub vertex_buffer: &'a Buffer,
+    pub index_buffer: &'a Buffer,
+    pub index_count: u32,
+    pub model: Option<&'a ModelSlot>,
+}
+
+fn aces_channel(x: f32) -> f32 {
+    ((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14)).clamp(0.0, 1.0)
 }
 
 impl GtmRenderer {
@@ -97,6 +134,10 @@ impl GtmRenderer {
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(caps.formats[0]);
+        if !format.is_srgb() {
+            log::warn!("no sRGB surface format available ({format:?}); output will look dark");
+        }
+        log::info!("surface format {format:?}, adapter {:?}", adapter.get_info().name);
 
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
@@ -164,6 +205,7 @@ impl GtmRenderer {
             direction: [-0.3, -0.7, -0.5, 3.5],  // dir + intensity
             color: [1.0, 0.95, 0.80, 0.0],        // warm sun
             ambient: [0.12, 0.15, 0.22, 1.0],     // blue-teal sky ambient
+            fog: [0.5, 0.6, 0.75, 0.003],
         };
         let light_buf = device.create_buffer_init(&util::BufferInitDescriptor {
             label: Some("light_buf"),
@@ -330,6 +372,79 @@ impl GtmRenderer {
             &material_bgl,
         );
 
+        // ── Sky pipeline ─────────────────────────────────────────────────
+        let sky = SkyUniform {
+            inv_view_proj: glam::Mat4::IDENTITY.to_cols_array_2d(),
+            cam_pos: [0.0; 4],
+            sun_dir: [0.0, 1.0, 0.0, 0.0],
+            horizon: [0.6, 0.7, 0.85, 1.0],
+            zenith: [0.2, 0.4, 0.8, 1.0],
+            sun_color: [1.0, 0.95, 0.8, 1.0],
+        };
+        let sky_buf = device.create_buffer_init(&util::BufferInitDescriptor {
+            label: Some("sky_buf"),
+            contents: cast_slice(&[sky]),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        });
+        let sky_bgl = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("sky_bgl"),
+            entries: &[BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let sky_bg = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("sky_bg"),
+            layout: &sky_bgl,
+            entries: &[BindGroupEntry { binding: 0, resource: sky_buf.as_entire_binding() }],
+        });
+        let sky_shader = device.create_shader_module(ShaderModuleDescriptor {
+            label: Some("sky_shader"),
+            source: ShaderSource::Wgsl(include_str!("shaders/sky.wgsl").into()),
+        });
+        let sky_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("sky_layout"),
+            bind_group_layouts: &[&sky_bgl],
+            push_constant_ranges: &[],
+        });
+        let sky_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("sky_pipeline"),
+            layout: Some(&sky_layout),
+            vertex: VertexState {
+                module: &sky_shader,
+                entry_point: "vs_main",
+                buffers: &[],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(FragmentState {
+                module: &sky_shader,
+                entry_point: "fs_main",
+                targets: &[Some(ColorTargetState {
+                    format,
+                    blend: Some(BlendState::REPLACE),
+                    write_mask: ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: PrimitiveState::default(),
+            depth_stencil: Some(DepthStencilState {
+                format: DEPTH_FORMAT,
+                depth_write_enabled: false,
+                depth_compare: CompareFunction::Always,
+                stencil: StencilState::default(),
+                bias: DepthBiasState::default(),
+            }),
+            multisample: MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
         Self {
             surface, device, queue, config,
             depth_view, _depth_tex: depth_tex,
@@ -340,6 +455,8 @@ impl GtmRenderer {
             pipeline,
             camera,
             scenes: Vec::new(),
+            clear_color: Color { r: 0.47, g: 0.65, b: 0.80, a: 1.0 },
+            sky_buf, sky_bg, sky_pipeline, sky,
         }
     }
 
@@ -369,9 +486,67 @@ impl GtmRenderer {
         // Push updated camera uniform
         let cam_data = self.camera.to_uniform();
         self.queue.write_buffer(&self.camera_buf, 0, cast_slice(&[cam_data]));
+        let vp = glam::Mat4::from_cols_array_2d(&cam_data.view_proj);
+        self.sky.inv_view_proj = vp.inverse().to_cols_array_2d();
+        self.sky.cam_pos = [self.camera.position.x, self.camera.position.y, self.camera.position.z, 1.0];
+        self.queue.write_buffer(&self.sky_buf, 0, cast_slice(&[self.sky]));
+    }
+
+    /// Sets sun, ambient, fog and sky from the time of day (hours, 0..24).
+    pub fn set_time_of_day(&mut self, hour: f32) {
+        let cfg = gtm_lighting::LightingConfig::gta6_dusk();
+        let Some(sky) = cfg.sample(hour) else { return };
+        let d = sky.sun_dir_to_sun;
+        let data = LightUniform {
+            direction: [-d.x, -d.y, -d.z, sky.sun_intensity.max(0.0)],
+            color: [sky.sun_color[0], sky.sun_color[1], sky.sun_color[2], 0.0],
+            ambient: [sky.ambient[0], sky.ambient[1], sky.ambient[2], 1.0],
+            fog: [sky.sky_horizon[0], sky.sky_horizon[1], sky.sky_horizon[2], 0.0035],
+        };
+        self.queue.write_buffer(&self.light_buf, 0, cast_slice(&[data]));
+        self.sky.sun_dir = [d.x, d.y, d.z, 0.0];
+        self.sky.horizon = [sky.sky_horizon[0], sky.sky_horizon[1], sky.sky_horizon[2], 1.0];
+        self.sky.zenith = [sky.sky_zenith[0], sky.sky_zenith[1], sky.sky_zenith[2], 1.0];
+        self.sky.sun_color = [sky.sun_color[0], sky.sun_color[1], sky.sun_color[2], sky.sun_intensity];
+        // Fog is mixed before tonemapping, so the clear color is the tonemapped horizon.
+        self.clear_color = Color {
+            r: aces_channel(sky.sky_horizon[0]) as f64,
+            g: aces_channel(sky.sky_horizon[1]) as f64,
+            b: aces_channel(sky.sky_horizon[2]) as f64,
+            a: 1.0,
+        };
+    }
+
+    pub fn create_model_slot(&self) -> ModelSlot {
+        let ident = glam::Mat4::IDENTITY.to_cols_array_2d();
+        let buf = self.device.create_buffer_init(&util::BufferInitDescriptor {
+            label: Some("model_slot_buf"),
+            contents: cast_slice(&[ModelUniform { model: ident, normal_mat: ident }]),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        });
+        let bind_group = self.device.create_bind_group(&BindGroupDescriptor {
+            label: Some("model_slot_bg"),
+            layout: &self.model_bgl,
+            entries: &[BindGroupEntry { binding: 0, resource: buf.as_entire_binding() }],
+        });
+        ModelSlot { buf, bind_group }
+    }
+
+    /// Rigid or uniformly scaled transforms only (the normal matrix is the inverse transpose).
+    pub fn write_model_slot(&self, slot: &ModelSlot, model: glam::Mat4) {
+        let normal = model.inverse().transpose();
+        let data = ModelUniform {
+            model: model.to_cols_array_2d(),
+            normal_mat: normal.to_cols_array_2d(),
+        };
+        self.queue.write_buffer(&slot.buf, 0, cast_slice(&[data]));
     }
 
     pub fn render(&mut self) -> Result<(), SurfaceError> {
+        self.render_items(&[])
+    }
+
+    pub fn render_items(&mut self, items: &[DrawItem<'_>]) -> Result<(), SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view   = output.texture.create_view(&TextureViewDescriptor::default());
 
@@ -385,12 +560,7 @@ impl GtmRenderer {
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
-                    ops: Operations {
-                        load: LoadOp::Clear(Color {
-                            r: 0.47, g: 0.65, b: 0.80, a: 1.0, // Florida sky blue
-                        }),
-                        store: StoreOp::Store,
-                    },
+                    ops: Operations { load: LoadOp::Clear(self.clear_color), store: StoreOp::Store },
                 })],
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
                     view: &self.depth_view,
@@ -400,6 +570,10 @@ impl GtmRenderer {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
+
+            pass.set_pipeline(&self.sky_pipeline);
+            pass.set_bind_group(0, &self.sky_bg, &[]);
+            pass.draw(0..3, 0..1);
 
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &self.camera_bg, &[]);
@@ -413,6 +587,17 @@ impl GtmRenderer {
                     pass.set_index_buffer(mesh.index_buffer.slice(..), IndexFormat::Uint32);
                     pass.draw_indexed(0..mesh.index_count, 0, 0..1);
                 }
+            }
+
+            for item in items {
+                if item.index_count == 0 {
+                    continue;
+                }
+                let bg = item.model.map(|m| &m.bind_group).unwrap_or(&self.model_bg);
+                pass.set_bind_group(2, bg, &[]);
+                pass.set_vertex_buffer(0, item.vertex_buffer.slice(..));
+                pass.set_index_buffer(item.index_buffer.slice(..), IndexFormat::Uint32);
+                pass.draw_indexed(0..item.index_count, 0, 0..1);
             }
         }
 

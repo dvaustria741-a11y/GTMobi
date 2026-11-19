@@ -872,6 +872,7 @@ dependencies = [
  "gtm-math",
  "image",
  "log",
+ "naga",
  "pollster",
  "wgpu",
  "winit",

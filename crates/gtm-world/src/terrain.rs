@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use wgpu::{util::DeviceExt, Buffer, Device, Queue};
 use glam::Vec3;
 use gtm_render::mesh::Vertex;
-use crate::chunk::{Chunk, ChunkCoord, CHUNK_SIZE};
+use crate::chunk::{Chunk, ChunkCoord, HeightField};
 use crate::biome::Biome;
 
 /// How many chunks to keep loaded in each direction from the camera.
@@ -15,13 +15,18 @@ pub struct GpuChunk {
 }
 
 pub struct TerrainGen {
-    seed: u32,
+    heights: HeightField,
     pub chunks: HashMap<ChunkCoord, GpuChunk>,
 }
 
 impl TerrainGen {
     pub fn new(seed: u32) -> Self {
-        Self { seed, chunks: HashMap::new() }
+        Self { heights: HeightField::new(seed), chunks: HashMap::new() }
+    }
+
+    /// Ground height in meters at a world position.
+    pub fn height_at(&self, x: f32, z: f32) -> f32 {
+        self.heights.height_at(x, z)
     }
 
     /// Call every frame with current camera position.
@@ -44,7 +49,7 @@ impl TerrainGen {
                     cz: center.cz + dz,
                 };
                 if !self.chunks.contains_key(&coord) {
-                    let chunk = Chunk::generate(coord, self.seed);
+                    let chunk = Chunk::generate_with(coord, &self.heights);
                     let gpu   = upload_chunk(device, &chunk);
                     self.chunks.insert(coord, gpu);
                 }
